@@ -1,5 +1,5 @@
 // Estado da Aplicação
-const STORAGE_KEY = "to_plano_terapeutico_v1";
+const STORAGE_KEY = "to_plano_terapeutico_v2";
 
 let state = {
   pacientes: [],
@@ -20,13 +20,13 @@ document.addEventListener("DOMContentLoaded", () => {
   renderizarListaPacientes();
 
   if (state.pacienteSelecionadoId) {
-    selecionarPaciente(state.pacienteSelecionadoId);
+    carregarFichaPaciente(state.pacienteSelecionadoId);
   }
 });
 
 function carregarDados() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem("to_plano_terapeutico_v1");
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed.pacientes) && parsed.pacientes.length > 0) {
@@ -39,7 +39,7 @@ function carregarDados() {
     console.error("Erro ao ler localStorage:", e);
   }
 
-  // Se for o primeiro acesso, carrega automaticamente os 46 pacientes embutidos
+  // Carga automática dos 46 pacientes embutidos
   if (typeof PACIENTES_INICIAIS !== "undefined" && PACIENTES_INICIAIS.length > 0) {
     state.pacientes = JSON.parse(JSON.stringify(PACIENTES_INICIAIS));
     state.pacienteSelecionadoId = state.pacientes[0].id;
@@ -64,18 +64,64 @@ function mostrarToast(msg) {
   clearTimeout(window._toastTimer);
   window._toastTimer = setTimeout(() => {
     toast.classList.add("hidden");
-  }, 3000);
+  }, 2800);
 }
 
 function getPacienteAtual() {
   return state.pacientes.find((p) => p.id === state.pacienteSelecionadoId) || null;
 }
 
+// Alternar entre Aba Principal "Pacientes" e Aba Principal "Ficha do Paciente"
+function abrirAbaPrincipal(aba) {
+  const btnPac = document.getElementById("nav-tab-pacientes");
+  const btnAtend = document.getElementById("nav-tab-atendimento");
+  const viewPac = document.getElementById("view-pacientes");
+  const viewAtend = document.getElementById("view-atendimento");
+
+  if (aba === "pacientes") {
+    btnPac.classList.add("active");
+    btnAtend.classList.remove("active");
+    viewPac.classList.add("active");
+    viewAtend.classList.remove("active");
+  } else {
+    btnPac.classList.remove("active");
+    btnAtend.classList.add("active");
+    viewPac.classList.remove("active");
+    viewAtend.classList.add("active");
+  }
+  window.scrollTo({ top: 0, behavior: "instant" });
+}
+
+// Alternar Sub-Abas internas da Ficha do Paciente
+function ativarSubAba(tabId) {
+  document.querySelectorAll(".tab-btn").forEach((b) => {
+    b.classList.toggle("active", b.dataset.tab === tabId);
+  });
+  document.querySelectorAll(".tab-panel").forEach((panel) => {
+    panel.classList.toggle("active", panel.id === tabId);
+  });
+  if (tabId === "tab-relatorio") {
+    renderizarRelatorio();
+  }
+}
+
 // Eventos
 function bindEvents() {
+  // Navegação principal por abas
+  document.getElementById("nav-tab-pacientes").addEventListener("click", () => abrirAbaPrincipal("pacientes"));
+  document.getElementById("nav-tab-atendimento").addEventListener("click", () => {
+    if (state.pacienteSelecionadoId) {
+      carregarFichaPaciente(state.pacienteSelecionadoId);
+    }
+    abrirAbaPrincipal("atendimento");
+  });
+
+  // Botões Voltar para lista de pacientes
+  document.getElementById("btn-voltar-pacientes").addEventListener("click", () => abrirAbaPrincipal("pacientes"));
+  document.getElementById("btn-voltar-lista-empty").addEventListener("click", () => abrirAbaPrincipal("pacientes"));
+
   // Abrir modal novo paciente
   document.getElementById("btn-novo-paciente").addEventListener("click", () => abrirModalPaciente());
-  document.getElementById("btn-empty-novo").addEventListener("click", () => abrirModalPaciente());
   document.getElementById("btn-editar-paciente").addEventListener("click", () => {
     const p = getPacienteAtual();
     if (p) abrirModalPaciente(p);
@@ -95,17 +141,12 @@ function bindEvents() {
   document.getElementById("btn-excluir-paciente").addEventListener("click", () => {
     const p = getPacienteAtual();
     if (!p) return;
-    if (confirm(`Deseja realmente excluir o cadastro e todos os registros de ${p.nome}?`)) {
+    if (confirm(`Deseja realmente excluir o cadastro de ${p.nome}?`)) {
       state.pacientes = state.pacientes.filter((item) => item.id !== p.id);
       state.pacienteSelecionadoId = state.pacientes.length ? state.pacientes[0].id : null;
       salvarDados();
       renderizarListaPacientes();
-      if (state.pacienteSelecionadoId) {
-        selecionarPaciente(state.pacienteSelecionadoId);
-      } else {
-        elWorkspace.classList.add("hidden");
-        elEmptyState.classList.remove("hidden");
-      }
+      abrirAbaPrincipal("pacientes");
       mostrarToast("Paciente excluído.");
     }
   });
@@ -113,33 +154,26 @@ function bindEvents() {
   // Busca
   elBuscaPaciente.addEventListener("input", renderizarListaPacientes);
 
-  // Abas
+  // Sub-Abas
   document.querySelectorAll(".tab-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
-      document.querySelectorAll(".tab-panel").forEach((panel) => panel.classList.remove("active"));
-      btn.classList.add("active");
-      document.getElementById(btn.dataset.tab).classList.add("active");
-
-      if (btn.dataset.tab === "tab-relatorio") {
-        renderizarRelatorio();
-      }
-    });
+    btn.addEventListener("click", () => ativarSubAba(btn.dataset.tab));
   });
 
-  // Salvar Plano Terapêutico
-  document.getElementById("btn-salvar-plano").addEventListener("click", () => {
+  // Salvar Plano Terapêutico (botão superior e inferior)
+  const handleSalvarPlano = () => {
     salvarPlanoDoPaciente();
     renderizarRoteiroSemanal();
     renderizarRelatorio();
-    mostrarToast("Plano terapêutico atualizado!");
-  });
+    mostrarToast("Plano terapêutico salvo!");
+  };
+  document.getElementById("btn-salvar-plano").addEventListener("click", handleSalvarPlano);
+  document.getElementById("btn-salvar-plano-bottom").addEventListener("click", handleSalvarPlano);
 
   // Alternar sugestões de atividades
   document.getElementById("btn-regerar-roteiro").addEventListener("click", () => {
     state.seedVariacao += 1;
     renderizarRoteiroSemanal();
-    mostrarToast("Sugestões de atividades atualizadas!");
+    mostrarToast("Sugestões atualizadas!");
   });
 
   // Registrar atendimento do dia
@@ -205,7 +239,7 @@ function salvarPacienteForm() {
     fecharModalPaciente();
     renderizarListaPacientes();
     selecionarPaciente(id);
-    mostrarToast("Dados da criança atualizados!");
+    mostrarToast("Dados atualizados!");
   } else {
     const novoId = "pac_" + Date.now();
     const novoPaciente = {
@@ -222,26 +256,26 @@ function salvarPacienteForm() {
       },
       registros: []
     };
-    state.pacientes.push(novoPaciente);
+    state.pacientes.unshift(novoPaciente);
     salvarDados();
     fecharModalPaciente();
     renderizarListaPacientes();
     selecionarPaciente(novoId);
-    // Leva direto para a aba do Plano Terapêutico para marcar as dificuldades/objetivos
-    document.querySelector('.tab-btn[data-tab="tab-plano"]').click();
-    mostrarToast("Criança cadastrada! Marque agora os objetivos do Plano Terapêutico.");
+    ativarSubAba("tab-plano");
+    mostrarToast("Criança cadastrada! Marque os objetivos do Plano.");
   }
 }
 
-// Lista Lateral
+// Lista de Pacientes
 function renderizarListaPacientes() {
   const termo = elBuscaPaciente.value.toLowerCase().trim();
   elListaPacientes.innerHTML = "";
+  document.getElementById("total-pacientes-badge").textContent = state.pacientes.length;
 
   const filtrados = state.pacientes.filter((p) => p.nome.toLowerCase().includes(termo));
 
   if (filtrados.length === 0) {
-    elListaPacientes.innerHTML = `<li style="font-size:13px; color:#64748b; padding:10px;">Nenhuma criança encontrada.</li>`;
+    elListaPacientes.innerHTML = `<li style="font-size:13px; color:#64748b; padding:12px;">Nenhuma criança encontrada.</li>`;
     return;
   }
 
@@ -250,22 +284,29 @@ function renderizarListaPacientes() {
     li.className = "patient-item" + (pac.id === state.pacienteSelecionadoId ? " active" : "");
     const qtdObjetivos = pac.plano?.itensAtivos?.length || 0;
     li.innerHTML = `
-      <div class="patient-item-name">${escapeHtml(pac.nome)}</div>
-      <div class="patient-item-meta">${pac.frequencia}x/sem • ${qtdObjetivos} objetivo(s) ativo(s)</div>
+      <div>
+        <div class="patient-item-name">${escapeHtml(pac.nome)}</div>
+        <div class="patient-item-meta">${pac.frequencia}x/sem • ${qtdObjetivos} objetivo(s) ativo(s)</div>
+      </div>
+      <span class="patient-item-arrow">›</span>
     `;
     li.addEventListener("click", () => selecionarPaciente(pac.id));
     elListaPacientes.appendChild(li);
   });
 }
 
-// Selecionar Paciente
-function selecionarPaciente(id) {
+// Carregar dados da ficha sem forçar troca de aba na inicialização
+function carregarFichaPaciente(id) {
   state.pacienteSelecionadoId = id;
   salvarDados();
   renderizarListaPacientes();
 
   const pac = getPacienteAtual();
-  if (!pac) return;
+  if (!pac) {
+    elWorkspace.classList.add("hidden");
+    elEmptyState.classList.remove("hidden");
+    return;
+  }
 
   elEmptyState.classList.add("hidden");
   elWorkspace.classList.remove("hidden");
@@ -279,7 +320,6 @@ function selecionarPaciente(id) {
     pac.observacoes || "Sem observações clínicas iniciais cadastradas.";
   document.getElementById("texto-freq-semanal").textContent = `${pac.frequencia} atendimento(s)/semana`;
 
-  // Data padrão de hoje no formulário de sessão
   const hoje = new Date().toISOString().split("T")[0];
   document.getElementById("reg-data").value = hoje;
 
@@ -289,7 +329,13 @@ function selecionarPaciente(id) {
   renderizarRelatorio();
 }
 
-// ABA 2: Plano Terapêutico
+// Ao clicar num paciente: carrega a ficha e abre direto na aba da Ficha do Paciente
+function selecionarPaciente(id) {
+  carregarFichaPaciente(id);
+  abrirAbaPrincipal("atendimento");
+}
+
+// SUB-ABA 2: Plano Terapêutico
 function renderizarPlanoTerapeutico() {
   const pac = getPacienteAtual();
   if (!pac) return;
@@ -327,7 +373,7 @@ function renderizarPlanoTerapeutico() {
     html += `
       <div class="axis-notes">
         <label>${escapeHtml(eixo.notaLabel)}</label>
-        <textarea class="txt-nota-eixo" data-eixo="${eixo.id}" rows="2" placeholder="Registre materiais específicos, adaptações ou observações deste eixo...">${escapeHtml(notaAtual)}</textarea>
+        <textarea class="txt-nota-eixo" data-eixo="${eixo.id}" rows="2" placeholder="Registre materiais específicos, adaptações ou observações...">${escapeHtml(notaAtual)}</textarea>
       </div>
     `;
 
@@ -362,7 +408,6 @@ function salvarPlanoDoPaciente() {
   renderizarListaPacientes();
 }
 
-// Helper para buscar detalhes de um item pelo ID
 function encontrarItemPlano(itemId) {
   for (const eixo of EIXOS_TERAPEUTICOS) {
     for (const sub of eixo.subgrupos) {
@@ -380,7 +425,7 @@ function encontrarItemPlano(itemId) {
   return null;
 }
 
-// ABA 1: Roteiro Semanal Automático
+// SUB-ABA 1: Roteiro Semanal Automático
 function renderizarRoteiroSemanal() {
   const pac = getPacienteAtual();
   if (!pac) return;
@@ -391,22 +436,24 @@ function renderizarRoteiroSemanal() {
   const idsAtivos = pac.plano?.itensAtivos || [];
   if (idsAtivos.length === 0) {
     container.innerHTML = `
-      <div class="card" style="grid-column: 1 / -1; text-align:center; padding:32px;">
-        <p style="color:#64748b; margin-bottom:12px;">
-          Nenhum objetivo foi marcado ainda no <strong>Plano Terapêutico</strong> desta criança.
+      <div class="card" style="grid-column: 1 / -1; text-align:center; padding:28px;">
+        <p style="color:#64748b; margin-bottom:14px;">
+          Nenhum objetivo foi marcado ainda no <strong>Plano Terapêutico (PTS)</strong> desta criança.
         </p>
-        <button class="btn btn-primary" onclick="document.querySelector('.tab-btn[data-tab=\'tab-plano\']').click()">
-          📋 Ir para o Plano Terapêutico e Marcar Objetivos
+        <button id="btn-ir-plano-vazio" class="btn btn-primary" type="button">
+          📋 Marcar Objetivos no Plano (PTS)
         </button>
       </div>
     `;
+    const btnIrPlano = document.getElementById("btn-ir-plano-vazio");
+    if (btnIrPlano) {
+      btnIrPlano.addEventListener("click", () => ativarSubAba("tab-plano"));
+    }
     return;
   }
 
   const itensDetalhados = idsAtivos.map(encontrarItemPlano).filter(Boolean);
   const numSessoes = pac.frequencia || 2;
-
-  // Distribui os objetivos equilibradamente entre as sessões da semana
   const sessoes = Array.from({ length: numSessoes }, () => []);
 
   if (itensDetalhados.length >= numSessoes) {
@@ -414,7 +461,6 @@ function renderizarRoteiroSemanal() {
       sessoes[idx % numSessoes].push(obj);
     });
   } else {
-    // Se houver menos objetivos que sessões, reforça os objetivos nas sessões com sugestões diferentes
     for (let s = 0; s < numSessoes; s++) {
       itensDetalhados.forEach((obj) => sessoes[s].push(obj));
     }
@@ -453,8 +499,8 @@ function renderizarRoteiroSemanal() {
         ${atividadesHtml}
       </div>
       <div class="session-card-footer">
-        <button class="btn btn-secondary btn-sm btn-usar-no-diario">
-          ✍️ Registrar Execução deste Atendimento
+        <button class="btn btn-secondary btn-sm btn-usar-no-diario" type="button">
+          ✍️ Registrar Execução no Diário
         </button>
       </div>
     `;
@@ -462,7 +508,7 @@ function renderizarRoteiroSemanal() {
     card.querySelector(".btn-usar-no-diario").addEventListener("click", () => {
       document.getElementById("reg-sessao-num").value = `Atendimento ${sIdx + 1}`;
       document.getElementById("reg-eixos-trabalhados").value = resumoEixos.join("; ");
-      document.querySelector('.tab-btn[data-tab="tab-diario"]').click();
+      ativarSubAba("tab-diario");
       document.getElementById("reg-como-foi").focus();
     });
 
@@ -470,7 +516,7 @@ function renderizarRoteiroSemanal() {
   });
 }
 
-// ABA 3: Diário / Registro Pós-Sessão
+// SUB-ABA 3: Diário / Registro Pós-Sessão
 function adicionarRegistroSessao() {
   const pac = getPacienteAtual();
   if (!pac) return;
@@ -493,14 +539,13 @@ function adicionarRegistroSessao() {
     comoFoi
   });
 
-  // Ordenar por data decrescente
   pac.registros.sort((a, b) => b.data.localeCompare(a.data));
 
   salvarDados();
   document.getElementById("reg-como-foi").value = "";
   renderizarHistoricoRegistros();
   renderizarRelatorio();
-  mostrarToast("Registro da sessão salvo com sucesso!");
+  mostrarToast("Registro da sessão salvo!");
 }
 
 function renderizarHistoricoRegistros() {
@@ -532,7 +577,7 @@ function renderizarHistoricoRegistros() {
       <div class="timeline-eixos">Foco: ${escapeHtml(reg.eixos || "Não especificado")}</div>
       <div class="timeline-desc">${escapeHtml(reg.comoFoi)}</div>
       <div class="timeline-actions">
-        <button class="btn-link-danger" data-id="${reg.id}">Excluir registro</button>
+        <button class="btn-link-danger" type="button">Excluir registro</button>
       </div>
     `;
 
@@ -549,7 +594,7 @@ function renderizarHistoricoRegistros() {
   });
 }
 
-// ABA 4: Relatório Individual
+// SUB-ABA 4: Relatório Individual
 function renderizarRelatorio() {
   const pac = getPacienteAtual();
   if (!pac) return;
@@ -571,7 +616,6 @@ function renderizarRelatorio() {
   const parciais = registros.filter((r) => r.status === "Realizado parcialmente").length;
   const naoRealizados = registros.filter((r) => r.status.includes("Não")).length;
 
-  // Agrupar objetivos ativos por eixo
   const ativosSet = new Set(pac.plano?.itensAtivos || []);
   let planoHtml = "";
 
@@ -676,11 +720,10 @@ function renderizarRelatorio() {
 function copiarTextoRelatorio() {
   const texto = document.getElementById("area-impressao-relatorio").innerText;
   navigator.clipboard.writeText(texto).then(() => {
-    mostrarToast("Relatório copiado para a área de transferência!");
+    mostrarToast("Relatório copiado!");
   });
 }
 
-// Exportar / Importar Backup JSON
 function exportarBackup() {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -690,7 +733,7 @@ function exportarBackup() {
   a.download = `backup-plano-terapeutico-to-${dataStr}.json`;
   a.click();
   URL.revokeObjectURL(url);
-  mostrarToast("Arquivo de backup baixado!");
+  mostrarToast("Backup baixado!");
 }
 
 function importarBackup(event) {
@@ -706,9 +749,9 @@ function importarBackup(event) {
         salvarDados();
         renderizarListaPacientes();
         if (state.pacienteSelecionadoId) {
-          selecionarPaciente(state.pacienteSelecionadoId);
+          carregarFichaPaciente(state.pacienteSelecionadoId);
         }
-        mostrarToast("Backup restaurado com sucesso!");
+        mostrarToast("Backup restaurado!");
       } else {
         alert("Arquivo de backup inválido.");
       }
@@ -720,7 +763,6 @@ function importarBackup(event) {
   event.target.value = "";
 }
 
-// Utilitários
 function formatarDataBR(isoDate) {
   if (!isoDate) return "";
   const [y, m, d] = isoDate.split("-");

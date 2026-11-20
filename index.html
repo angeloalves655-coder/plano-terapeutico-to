@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Plano Terapêutico TO — Gestão Clínica</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,199 +11,215 @@
 </head>
 <body>
   <div class="app-shell">
-    <!-- Sidebar / Navegação -->
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-icon">🌿</div>
+    <!-- Barra Superior Mobile / Navegação Principal por Abas -->
+    <nav class="top-app-bar no-print">
+      <div class="brand-compact">
+        <span class="brand-logo">🌿</span>
         <div>
           <h1>Terapia Ocupacional</h1>
           <span>Plano Terapêutico & Evolução</span>
         </div>
       </div>
-
-      <div class="sidebar-section">
-        <div class="section-header-row">
-          <h2>Pacientes</h2>
-          <button id="btn-novo-paciente" class="btn btn-primary btn-sm">+ Novo</button>
-        </div>
-        <div class="search-box">
-          <input type="text" id="busca-paciente" placeholder="Buscar criança..." />
-        </div>
-        <ul id="lista-pacientes" class="patient-list"></ul>
+      <div class="main-nav-tabs">
+        <button id="nav-tab-pacientes" class="main-nav-btn active" type="button">
+          👥 Pacientes (<span id="total-pacientes-badge">46</span>)
+        </button>
+        <button id="nav-tab-atendimento" class="main-nav-btn" type="button">
+          📋 Ficha do Paciente
+        </button>
       </div>
+    </nav>
 
-      <div class="sidebar-footer">
-        <button id="btn-exportar-backup" class="btn btn-outline btn-block btn-sm">💾 Exportar Backup (JSON)</button>
-        <label class="btn btn-outline btn-block btn-sm file-upload-label">
-          📂 Importar Backup
-          <input type="file" id="input-importar-backup" accept=".json" hidden />
-        </label>
-      </div>
-    </aside>
-
-    <!-- Conteúdo Principal -->
-    <main class="main-content">
-      <!-- Tela Inicial Vazia / Boas-vindas -->
-      <div id="empty-state" class="empty-state">
-        <div class="empty-card">
-          <div class="empty-icon">📋</div>
-          <h2>Selecione ou cadastre uma criança</h2>
-          <p>
-            Configure o <strong>Plano Terapêutico Individual</strong> baseado nos 7 eixos clínicos (AVD, Sistemas Sensoriais, Praxias, Funções Escolares, Seletividade Alimentar e Socialização), defina a frequência semanal e receba sugestões estruturadas para cada atendimento.
-          </p>
-          <button id="btn-empty-novo" class="btn btn-primary">+ Cadastrar Primeira Criança</button>
-        </div>
-      </div>
-
-      <!-- Painel da Criança Selecionada -->
-      <div id="patient-workspace" class="workspace hidden">
-        <!-- Cabeçalho do Paciente -->
-        <header class="patient-header">
-          <div>
-            <div class="badge-row">
-              <span class="badge badge-teal" id="header-frequencia">2x por semana</span>
-              <span class="badge badge-gray" id="header-duracao">Sessão: 40 min</span>
-              <span class="badge badge-gray" id="header-terapeuta">Terapeuta: Flavia Cherotti</span>
-            </div>
-            <h2 id="header-nome-paciente">Nome da Criança</h2>
-            <p class="subtitle" id="header-diagnostico">Observações / Foco clínico</p>
+    <!-- ABA PRINCIPAL 1: LISTA DE PACIENTES -->
+    <section id="view-pacientes" class="main-view active">
+      <div class="view-container">
+        <div class="pacientes-toolbar">
+          <div class="search-box-full">
+            <input type="text" id="busca-paciente" placeholder="🔍 Buscar criança por nome..." />
           </div>
-          <div class="header-actions">
-            <button id="btn-editar-paciente" class="btn btn-outline">✏️ Editar Cadastro & Plano</button>
-            <button id="btn-excluir-paciente" class="btn btn-danger-outline">🗑️ Excluir</button>
+          <button id="btn-novo-paciente" class="btn btn-primary" type="button">+ Novo Paciente</button>
+        </div>
+
+        <ul id="lista-pacientes" class="patient-grid-list"></ul>
+
+        <div class="backup-bar">
+          <button id="btn-exportar-backup" class="btn btn-outline btn-sm" type="button">💾 Exportar Backup (JSON)</button>
+          <label class="btn btn-outline btn-sm file-upload-label">
+            📂 Importar Backup
+            <input type="file" id="input-importar-backup" accept=".json" hidden />
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABA PRINCIPAL 2: FICHA E ABAS DO PACIENTE SELECIONADO -->
+    <section id="view-atendimento" class="main-view">
+      <div class="view-container">
+        <!-- Tela Vazia caso nenhum paciente exista -->
+        <div id="empty-state" class="empty-state hidden">
+          <div class="empty-card">
+            <div class="empty-icon">📋</div>
+            <h2>Nenhuma criança selecionada</h2>
+            <p>Volte na aba <strong>Pacientes</strong> e toque sobre o nome de uma criança ou cadastre um novo paciente.</p>
+            <button id="btn-voltar-lista-empty" class="btn btn-primary" type="button">👥 Ver Lista de Pacientes</button>
           </div>
-        </header>
+        </div>
 
-        <!-- Abas de Navegação -->
-        <nav class="tabs">
-          <button class="tab-btn active" data-tab="tab-roteiro">📅 Roteiro Semanal & Sugestões</button>
-          <button class="tab-btn" data-tab="tab-plano">📋 Plano Terapêutico (PTS)</button>
-          <button class="tab-btn" data-tab="tab-diario">✍️ Registro de Sessão (Diário)</button>
-          <button class="tab-btn" data-tab="tab-relatorio">📄 Gerar Relatório</button>
-        </nav>
+        <!-- Workspace do Paciente -->
+        <div id="patient-workspace" class="workspace">
+          <!-- Botão Voltar + Cabeçalho do Paciente -->
+          <div class="back-row no-print">
+            <button id="btn-voltar-pacientes" class="btn btn-outline btn-sm" type="button">← Voltar para Pacientes</button>
+          </div>
 
-        <!-- ABA 1: ROTEIRO SEMANAL & SUGESTÕES DE ATIVIDADES -->
-        <section id="tab-roteiro" class="tab-panel active">
-          <div class="panel-intro">
+          <header class="patient-header">
             <div>
-              <h3>Planejamento Automático da Semana</h3>
-              <p>Distribuído conforme a frequência de <strong id="texto-freq-semanal">2 atendimentos/semana</strong> e os objetivos ativos no plano terapêutico.</p>
-            </div>
-            <button id="btn-regerar-roteiro" class="btn btn-secondary">🔄 Alternar Sugestões de Atividades</button>
-          </div>
-
-          <div id="container-sessoes-semanais" class="sessions-grid"></div>
-        </section>
-
-        <!-- ABA 2: PLANO TERAPÊUTICO INDIVIDUAL (7 EIXOS) -->
-        <section id="tab-plano" class="tab-panel">
-          <div class="panel-intro">
-            <div>
-              <h3>Plano Terapêutico Individualizado</h3>
-              <p>Marque os objetivos e intervenções que devem ser trabalhados com esta criança e adicione observações por eixo.</p>
-            </div>
-            <button id="btn-salvar-plano" class="btn btn-primary">💾 Salvar Alterações do Plano</button>
-          </div>
-          <div id="container-eixos-plano" class="axes-container"></div>
-        </section>
-
-        <!-- ABA 3: REGISTRO DO DIA / EVOLUÇÃO DA SESSÃO -->
-        <section id="tab-diario" class="tab-panel">
-          <div class="two-col-grid">
-            <!-- Formulário de Novo Registro -->
-            <div class="card">
-              <h3>Registrar Atendimento do Dia</h3>
-              <form id="form-registro-sessao">
-                <div class="form-row">
-                  <div class="form-group">
-                    <label for="reg-data">Data da Sessão</label>
-                    <input type="date" id="reg-data" required />
-                  </div>
-                  <div class="form-group">
-                    <label for="reg-sessao-num">Sessão da Semana</label>
-                    <select id="reg-sessao-num">
-                      <option value="Atendimento 1">Atendimento 1</option>
-                      <option value="Atendimento 2">Atendimento 2</option>
-                      <option value="Atendimento 3">Atendimento 3</option>
-                      <option value="Atendimento 4">Atendimento 4</option>
-                      <option value="Atendimento 5">Atendimento 5</option>
-                      <option value="Sessão Extra / Reposição">Sessão Extra / Reposição</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div class="form-group">
-                  <label>Foi possível realizar o plano proposto?</label>
-                  <div class="status-selector">
-                    <label class="status-option">
-                      <input type="radio" name="reg-status" value="Realizado integralmente" checked />
-                      <span class="status-pill status-ok">✅ Realizado integralmente</span>
-                    </label>
-                    <label class="status-option">
-                      <input type="radio" name="reg-status" value="Realizado parcialmente" />
-                      <span class="status-pill status-partial">⚠️ Realizado parcialmente</span>
-                    </label>
-                    <label class="status-option">
-                      <input type="radio" name="reg-status" value="Não realizado / Intercorrência" />
-                      <span class="status-pill status-no">❌ Não realizado</span>
-                    </label>
-                  </div>
-                </div>
-
-                <div class="form-group">
-                  <label for="reg-eixos-trabalhados">Eixos / Atividades trabalhadas hoje</label>
-                  <input type="text" id="reg-eixos-trabalhados" placeholder="Ex: Sistema Vestibular (balanço), Coordenação Motora Fina (recorte)..." required />
-                </div>
-
-                <div class="form-group">
-                  <label for="reg-como-foi">Como foi o atendimento? (Engajamento, comportamento, respostas, materiais)</label>
-                  <textarea id="reg-como-foi" rows="4" placeholder="Descreva a resposta da criança às atividades, nível de colaboração, regulação sensorial, conquistas ou dificuldades observadas..." required></textarea>
-                </div>
-
-                <button type="submit" class="btn btn-primary btn-block">Salvar Registro da Sessão</button>
-              </form>
-            </div>
-
-            <!-- Histórico de Atendimentos -->
-            <div class="card">
-              <div class="section-header-row">
-                <h3>Histórico de Atendimentos</h3>
-                <span class="badge badge-teal" id="contador-registros">0 registros</span>
+              <div class="badge-row">
+                <span class="badge badge-teal" id="header-frequencia">2x por semana</span>
+                <span class="badge badge-gray" id="header-duracao">Sessão: 40 Min.</span>
+                <span class="badge badge-gray" id="header-terapeuta">Terapeuta: Flavia Cherotti</span>
               </div>
-              <div id="lista-registros-sessao" class="timeline-list"></div>
+              <h2 id="header-nome-paciente">Nome da Criança</h2>
+              <p class="subtitle" id="header-diagnostico">Observações / Foco clínico</p>
             </div>
-          </div>
-        </section>
-
-        <!-- ABA 4: GERADOR DE RELATÓRIO -->
-        <section id="tab-relatorio" class="tab-panel">
-          <div class="panel-intro no-print">
-            <div>
-              <h3>Relatório de Evolução & Plano Terapêutico</h3>
-              <p>Documento consolidado com os objetivos ativos, adesão ao plano e histórico clínico da criança.</p>
+            <div class="header-actions no-print">
+              <button id="btn-editar-paciente" class="btn btn-outline btn-sm" type="button">✏️ Editar Dados</button>
+              <button id="btn-excluir-paciente" class="btn btn-danger-outline btn-sm" type="button">🗑️ Excluir</button>
             </div>
-            <div class="header-actions">
-              <button id="btn-copiar-relatorio" class="btn btn-outline">📋 Copiar Texto</button>
-              <button id="btn-imprimir-relatorio" class="btn btn-primary">🖨️ Imprimir / Salvar PDF</button>
+          </header>
+
+          <!-- Sub-Abas Internas do Paciente -->
+          <nav class="tabs no-print">
+            <button class="tab-btn active" data-tab="tab-roteiro" type="button">📅 Roteiro Semanal</button>
+            <button class="tab-btn" data-tab="tab-plano" type="button">📋 Plano (PTS)</button>
+            <button class="tab-btn" data-tab="tab-diario" type="button">✍️ Diário de Sessão</button>
+            <button class="tab-btn" data-tab="tab-relatorio" type="button">📄 Relatório</button>
+          </nav>
+
+          <!-- SUB-ABA 1: ROTEIRO SEMANAL & SUGESTÕES -->
+          <section id="tab-roteiro" class="tab-panel active">
+            <div class="panel-intro">
+              <div>
+                <h3>Planejamento Automático da Semana</h3>
+                <p>Distribuído conforme <strong id="texto-freq-semanal">1 atendimento/semana</strong> e os objetivos ativos no Plano (PTS).</p>
+              </div>
+              <button id="btn-regerar-roteiro" class="btn btn-secondary btn-sm" type="button">🔄 Alternar Sugestões</button>
             </div>
-          </div>
 
-          <div class="report-filter-bar no-print">
-            <label>
-              Incluir registros a partir de:
-              <input type="date" id="relatorio-data-inicio" />
-            </label>
-            <label>
-              Até:
-              <input type="date" id="relatorio-data-fim" />
-            </label>
-            <button id="btn-atualizar-relatorio" class="btn btn-secondary btn-sm">Atualizar Relatório</button>
-          </div>
+            <div id="container-sessoes-semanais" class="sessions-grid"></div>
+          </section>
 
-          <div id="area-impressao-relatorio" class="report-sheet"></div>
-        </section>
+          <!-- SUB-ABA 2: PLANO TERAPÊUTICO INDIVIDUAL (7 EIXOS) -->
+          <section id="tab-plano" class="tab-panel">
+            <div class="panel-intro">
+              <div>
+                <h3>Plano Terapêutico Individualizado</h3>
+                <p>Marque os objetivos e intervenções desta criança e salve para gerar o roteiro.</p>
+              </div>
+              <button id="btn-salvar-plano" class="btn btn-primary" type="button">💾 Salvar Plano</button>
+            </div>
+            <div id="container-eixos-plano" class="axes-container"></div>
+            <div style="margin-top:16px; text-align:right;">
+              <button id="btn-salvar-plano-bottom" class="btn btn-primary" type="button">💾 Salvar Alterações do Plano</button>
+            </div>
+          </section>
+
+          <!-- SUB-ABA 3: REGISTRO DO DIA / DIÁRIO -->
+          <section id="tab-diario" class="tab-panel">
+            <div class="two-col-grid">
+              <div class="card">
+                <h3>Registrar Atendimento do Dia</h3>
+                <form id="form-registro-sessao">
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="reg-data">Data da Sessão</label>
+                      <input type="date" id="reg-data" required />
+                    </div>
+                    <div class="form-group">
+                      <label for="reg-sessao-num">Sessão da Semana</label>
+                      <select id="reg-sessao-num">
+                        <option value="Atendimento 1">Atendimento 1</option>
+                        <option value="Atendimento 2">Atendimento 2</option>
+                        <option value="Atendimento 3">Atendimento 3</option>
+                        <option value="Atendimento 4">Atendimento 4</option>
+                        <option value="Atendimento 5">Atendimento 5</option>
+                        <option value="Sessão Extra / Reposição">Sessão Extra / Reposição</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Foi possível realizar o plano proposto?</label>
+                    <div class="status-selector">
+                      <label class="status-option">
+                        <input type="radio" name="reg-status" value="Realizado integralmente" checked />
+                        <span class="status-pill status-ok">✅ Realizado integralmente</span>
+                      </label>
+                      <label class="status-option">
+                        <input type="radio" name="reg-status" value="Realizado parcialmente" />
+                        <span class="status-pill status-partial">⚠️ Realizado parcialmente</span>
+                      </label>
+                      <label class="status-option">
+                        <input type="radio" name="reg-status" value="Não realizado / Intercorrência" />
+                        <span class="status-pill status-no">❌ Não realizado</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="reg-eixos-trabalhados">Eixos / Atividades trabalhadas hoje</label>
+                    <input type="text" id="reg-eixos-trabalhados" placeholder="Ex: Sistema Vestibular, Coordenação Motora Fina..." required />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="reg-como-foi">Como foi o atendimento?</label>
+                    <textarea id="reg-como-foi" rows="4" placeholder="Descreva engajamento, respostas sensoriais, conquistas ou dificuldades..." required></textarea>
+                  </div>
+
+                  <button type="submit" class="btn btn-primary btn-block">Salvar Registro da Sessão</button>
+                </form>
+              </div>
+
+              <div class="card">
+                <div class="section-header-row">
+                  <h3>Histórico de Atendimentos</h3>
+                  <span class="badge badge-teal" id="contador-registros">0 registros</span>
+                </div>
+                <div id="lista-registros-sessao" class="timeline-list"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- SUB-ABA 4: GERADOR DE RELATÓRIO -->
+          <section id="tab-relatorio" class="tab-panel">
+            <div class="panel-intro no-print">
+              <div>
+                <h3>Relatório de Evolução & Plano Terapêutico</h3>
+                <p>Documento consolidado pronto para imprimir, salvar em PDF ou copiar.</p>
+              </div>
+              <div class="header-actions">
+                <button id="btn-copiar-relatorio" class="btn btn-outline btn-sm" type="button">📋 Copiar Texto</button>
+                <button id="btn-imprimir-relatorio" class="btn btn-primary btn-sm" type="button">🖨️ Imprimir / PDF</button>
+              </div>
+            </div>
+
+            <div class="report-filter-bar no-print">
+              <label>
+                De:
+                <input type="date" id="relatorio-data-inicio" />
+              </label>
+              <label>
+                Até:
+                <input type="date" id="relatorio-data-fim" />
+              </label>
+              <button id="btn-atualizar-relatorio" class="btn btn-secondary btn-sm" type="button">Filtrar</button>
+            </div>
+
+            <div id="area-impressao-relatorio" class="report-sheet"></div>
+          </section>
+        </div>
       </div>
-    </main>
+    </section>
   </div>
 
   <!-- MODAL: CADASTRO / EDIÇÃO DE CRIANÇA -->
@@ -211,7 +227,7 @@
     <div class="modal-card">
       <div class="modal-header">
         <h3 id="modal-titulo">Cadastrar Nova Criança</h3>
-        <button id="btn-fechar-modal" class="btn-icon">&times;</button>
+        <button id="btn-fechar-modal" class="btn-icon" type="button">&times;</button>
       </div>
       <form id="form-paciente">
         <input type="hidden" id="pac-id" />
@@ -222,7 +238,7 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label for="pac-idade">Idade / Data de Nascimento</label>
+            <label for="pac-idade">Idade / Nascimento</label>
             <input type="text" id="pac-idade" placeholder="Ex: 5 anos" />
           </div>
           <div class="form-group">
@@ -233,7 +249,7 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label for="pac-frequencia">Atendimentos por Semana *</label>
+            <label for="pac-frequencia">Atendimentos/Semana *</label>
             <select id="pac-frequencia" required>
               <option value="1">1 vez por semana</option>
               <option value="2" selected>2 vezes por semana</option>
@@ -249,8 +265,8 @@
         </div>
 
         <div class="form-group">
-          <label for="pac-observacoes">Queixa Principal / Perfil Clínico</label>
-          <textarea id="pac-observacoes" rows="3" placeholder="Ex: Hipersensibilidade tátil e auditiva, dificuldade em motricidade fina e seletividade alimentar..."></textarea>
+          <label for="pac-observacoes">Queixa Principal / Convênio / Sala</label>
+          <textarea id="pac-observacoes" rows="3" placeholder="Ex: Convênio SAVI | Sala 12 | Hipersensibilidade tátil..."></textarea>
         </div>
 
         <div class="modal-footer">
